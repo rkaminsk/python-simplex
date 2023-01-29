@@ -1,195 +1,224 @@
-"""
-Implementation of the simplex algorithm.
-"""
-import heapq
+from typing import List, DefaultDict, Sequence, Tuple
+from fractions import Fraction
+from collections import defaultdict
 
-from typing import List, Tuple
+Index = int
+IndexSet = List[int]
+Vector = DefaultDict[int, Fraction]
+Matrix = DefaultDict[int, Vector]
 
-Vector = List[float]
-Matrix = List[Vector]
-Assignment = List[Tuple[int, float]]
 
-def dot(a: Vector, b: Vector) -> float:
+def vector(elems: Sequence[Tuple[int, Fraction]] = []) -> Vector:
+    vec = defaultdict(lambda: Fraction(0))
+    for idx, val in elems:
+        vec[idx] = val
+    return vec
+
+
+def matrix(elems: Sequence[Tuple[int, Vector]] = []) -> Matrix:
+    mat: Matrix = defaultdict(vector)
+    for i, vec in elems:
+        mat[i] = vec
+    return mat
+
+
+def problem_to_str(
+    N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
+) -> str:
     """
-    Compute the dot product of `a` and `b`.
+    Convert the given linear problem into a readable string.
     """
-    return sum(x * y for x, y in zip(a, b))
+    ret = f" z  = {float(v):7.2f} + "
+    ret += " + ".join(f"{float(c[j]):7.2f} x{j}" for j in sorted(N))
+    ret += "\n"
+    for i in sorted(B):
+        ret += f"x{i} = ".rjust(6)
+        ret += f"{float(b[i]):7.2f} - "
+        ret += " - ".join(f"{float(A[i][j]):7.2f} x{j}" for j in sorted(N))
+        ret += "\n"
+
+    return ret
 
 
-def column_vector(A: Matrix, j: int) -> Vector:
-    """
-    Extract column `j` from matrix `A`.
-    """
-    return [row[j] for row in A]
+def pivot(
+    N: IndexSet,
+    B: IndexSet,
+    A: Matrix,
+    b: Vector,
+    c: Vector,
+    v: Fraction,
+    l: Index,
+    e: Index,
+) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
+    An = matrix()
+    bn = vector()
+    cn = vector()
+
+    # take care of row e
+    bn[e] = b[l] / A[l][e]
+    for j in N:
+        if j == e:
+            continue
+        An[e][j] = A[l][j] / A[l][e]
+    An[e][l] = 1 / A[l][e]
+
+    # take care of the remaining rows
+    for i in B:
+        if i == l:
+            continue
+        bn[i] = b[i] - A[i][e] * bn[e]
+        for j in N:
+            if j == e:
+                continue
+            An[i][j] = A[i][j] - A[i][e] * An[e][j]
+        An[i][l] = -A[i][e] * An[e][l]
+
+    # compute objective function
+    vn = v + c[e] * bn[e]
+    for j in N:
+        if j == e:
+            continue
+        cn[j] = c[j] - c[e] * An[e][j]
+    cn[l] = -c[e] * An[e][l]
+
+    # swap x_e and x_l
+    Nn = N[:]
+    Nn[N.index(e)] = l
+    Bn = B[:]
+    Bn[B.index(l)] = e
+
+    return Nn, Bn, An, bn, cn, vn
 
 
-def transpose(A: Matrix) -> Matrix:
-    """
-    Transpose the given matrix.
-    """
-    return [column_vector(A, j) for j in range(len(A[0]))]
+def solve(
+    N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
+) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
+    while True:
+        # select an entering index
+        for e in N:
+            if c[e] > 0:
+                break
+        else:
+            break
+
+        # select a leaving index
+        l = None
+        mm = None
+        for i in B:
+            if A[i][e] > 0:
+                m = b[i] / A[i][e]
+                if l is None or m < mm:
+                    l = i
+                    mm = m
+
+        # do the pivot if the problem is bounded
+        if l is None:
+            raise RuntimeError("problem is unbounded")
+        print(f"after pivoting around {l} and {e}")
+        N, B, A, b, c, v = pivot(N, B, A, b, c, v, l, e)
+        print(problem_to_str(N, B, A, b, c, v))
+    return N, B, A, b, c, v
 
 
-def is_pivot_col(col: Vector) -> bool:
-    """
-    Check if the given column can be used for pivoting.
-    """
-    return (len([c for c in col if c == 0]) == len(col) - 1) and sum(col) == 1
+def initialize(N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector):
+    v = Fraction(0)
+    l = min(b, key=b.get)
+
+    print("initial problem:")
+    print(problem_to_str(N, B, A, b, c, v))
+
+    # check if the basic solution is already feasible
+    if b[l] >= 0:
+        return N, B, A, b, c, v
+
+    # construct artificial problem
+    N.append(0)
+    for i in B:
+        A[i][0] = Fraction(-1)
+    c_orig, c = c, vector([(0, Fraction(-1))])
+    N, B, A, b, c, v = pivot(N, B, A, b, c, v, l, 0)
+
+    print("artificial problem:")
+    print(problem_to_str(N, B, A, b, c, v))
+
+    # solve artificial problem
+    N, B, A, b, c, v = solve(N, B, A, b, c, v)
+
+    if b[0] > 0:
+        raise RuntimeError("problem is infeasible")
+
+    if 0 in B:
+        # move variable x_0 out of the basis by an arbitrary degenerate pivot
+        for e in N:
+            if A[0][e] == 0:
+                continue
+            N, B, A, b, c, v = pivot(N, B, A, b, c, v, 0, e)
+            break
+
+    # remove the artificial variable
+    N.remove(0)
+    for i in A:
+        A[i].pop(0, None)
+
+    # restore the original objective function
+    c, v = vector(), Fraction(0)
+    for i, val in c_orig.items():
+        if i in N:
+            c[i] += val
+        elif i in B:
+            v += c_orig[i] * b[i]
+            for j in A[i]:
+                c[j] -= c_orig[i] * A[i][j]
+
+    print("initialized problem:")
+    print(problem_to_str(N, B, A, b, c, v))
+    return N, B, A, b, c, v
 
 
-def variable_value_for_pivot_column(tab: Matrix, col: Vector) -> float:
-    pivot_row = [i for (i, x) in enumerate(col) if x == 1][0]
-    return tab[pivot_row][-1]
-
-
-def init_tableau(c: Vector, A: Matrix, b: Vector):
-    """
-    Initialize the given tableau.
-
-    The tableau is composed as follows:
-
-        (A|b)
-        (c|0)
-
-    Matrix A of dimension (n+m,m) holds the coefficients of the linear
-    constraints, vector b of size m the guards of the constraints, and vector c
-    of size n+m the coefficients of the cost function. The tableau is assumed
-    to already contain slack variables in the last m columns and the costs to
-    be zero for the slack variables.
-    """
-    tab = [row[:] + [x] for row, x in zip(A, b)]
-    tab.append(c[:] + [0])
-    return tab
-
-
-def primal_solution(tab: Matrix) -> List[Tuple[int, float]]:
-    """
-    Extract variable assignment from tableau.
-    """
-    # the pivot columns denote which variables are used
-    columns = transpose(tab)
-    indices = [j for j, col in enumerate(columns[:-1]) if is_pivot_col(col)]
-    return [
-        (colIndex, variable_value_for_pivot_column(tab, columns[colIndex]))
-        for colIndex in indices
-    ]
-
-
-def objective_value(tab: Matrix) -> float:
-    """
-    Extract objective value from tableau.
-    """
-    return -(tab[-1][-1])
-
-
-def can_improve(tab: Matrix) -> bool:
-    """
-    Check if the objective value can still be improved.
-    """
-    lastRow = tab[-1]
-    return any(x > 0 for x in lastRow[:-1])
-
-
-def more_than_one_min(L: List[Tuple[int, float]]) -> bool:
-    """
-    Check if the given vector contains two times the same smallest element.
-    """
-    if len(L) <= 1:
-        return False
-
-    x, y = heapq.nsmallest(2, L, key=lambda x: x[1])
-    return x == y
-
-
-def find_pivot_index(tab: Matrix) -> Tuple[int, int]:
-    """
-    Find a suitiable point for pivoting.
-    """
-    # pick minimum positive index of the last row
-    column_choices = [(i, x) for (i, x) in enumerate(tab[-1][:-1]) if x > 0]
-    col = min(column_choices, key=lambda a: a[1])[0]
-
-    # check if unbounded
-    if all(row[col] <= 0 for row in tab):
-        raise Exception("Linear program is unbounded.")
-
-    # check for degeneracy: more than one minimizer of the quotient
-    quotients = [
-        (i, r[-1] / r[col]) for i, r in enumerate(tab[:-1]) if r[col] > 0
-    ]
-
-    # FIXME: this test can impossibly be correct
-    # if the problem were really degenerate, we could also dynamically switch to Bland's rule for pivoting.
-    if more_than_one_min(quotients):
-        raise Exception("Linear program is degenerate.")
-
-    # pick row index minimizing the quotient
-    row = min(quotients, key=lambda x: x[1])[0]
-
-    return row, col
-
-
-def pivot_about(tab: Matrix, pivot: Tuple[int, int]) -> None:
-    """
-    Pivot the given tableau around the pivot point.
-    """
-    i, j = pivot
-
-    pivot_denom = tab[i][j]
-    tab[i] = [x / pivot_denom for x in tab[i]]
-
-    for k in range(len(tab)):
-        if k != i:
-            pivot_row_multiple = [y * tab[k][j] for y in tab[i]]
-            tab[k] = [x - y for x, y in zip(tab[k], pivot_row_multiple)]
-
-
-def simplex(c: Vector, A: Matrix, b: Vector) -> Tuple[Matrix, Assignment, float]:
-    """
-    Solve the given standard-form linear program:
-
-      max <c,x>
-      s.t. Ax = b
-           x >= 0
-
-    providing the optimal solution x* and the value of the objective function
-    """
-    tab = init_tableau(c, A, b)
-    print("Initial tableau:")
-    for row in tab:
-        print(row)
-    print()
-
-    while can_improve(tab):
-        pivot = find_pivot_index(tab)
-        print(f"Next pivot index is={pivot[0]},{pivot[1]}\n")
-        pivot_about(tab, pivot)
-        print("Tableau after pivot:")
-        for row in tab:
-            print(row)
-        print()
-
-    return tab, primal_solution(tab), objective_value(tab)
+def simplex(
+    N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector
+) -> Tuple[Vector, Fraction]:
+    # initialize problem
+    N, B, A, b, c, v = initialize(N, B, A, b, c)
+    # solve problem
+    N, B, A, b, c, v = solve(N, B, A, b, c, v)
+    # return solution
+    return b.copy(), v
 
 
 def main():
-    """
-    Run an example.
-    """
-    c = [300, 250, 450]
-    A = [[15, 20, 25], [35, 60, 60], [20, 30, 25], [0, 250, 0]]
-    b = [1200, 3000, 1500, 500]
+    # example with initial basic feasible solution
+    N = [1, 2, 3]
+    B = [4, 5, 6]
+    A = matrix(
+        [
+            (4, vector([(1, Fraction(1)), (2, Fraction(1)), (3, Fraction(3))])),
+            (5, vector([(1, Fraction(2)), (2, Fraction(2)), (3, Fraction(5))])),
+            (6, vector([(1, Fraction(4)), (2, Fraction(1)), (3, Fraction(2))])),
+        ]
+    )
+    b = vector([(4, Fraction(30)), (5, Fraction(24)), (6, Fraction(36))])
+    c = vector([(1, Fraction(3)), (2, Fraction(1)), (3, Fraction(2))])
 
-    # add slack variables by hand
-    A[0] += [1, 0, 0, 0]
-    A[1] += [0, 1, 0, 0]
-    A[2] += [0, 0, 1, 0]
-    A[3] += [0, 0, 0, -1]
-    c += [0, 0, 0, 0]
+    # example without initial basic feasible solution
+    N = [1, 2]
+    B = [3, 4]
+    A = matrix(
+        [
+            (3, vector([(1, Fraction(2)), (2, Fraction(-1))])),
+            (4, vector([(1, Fraction(1)), (2, Fraction(-5))])),
+        ]
+    )
+    b = vector([(3, Fraction(2)), (4, Fraction(-4))])
+    c = vector([(1, Fraction(2)), (2, Fraction(-1))])
 
-    t, s, v = simplex(c, A, b)
-    print(s)
-    print(v)
+    x, z = simplex(N, B, A, b, c)
+    print(
+        ", ".join(
+            f"{var} = {val}" for var, val in [(f"x_{i}", x[i]) for i in N] + [("z", z)]
+        )
+    )
+
 
 if __name__ == "__main__":
     main()
