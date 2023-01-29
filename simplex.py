@@ -94,20 +94,20 @@ def solve(
     N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
     while True:
-        # select an entering index
-        for e in N:
+        # select an entering variable
+        for e in sorted(N):
             if c[e] > 0:
                 break
         else:
             break
 
-        # select a leaving index
+        # select a leaving variable
         l = None
         mm = None
         for i in B:
             if A[i][e] > 0:
                 m = b[i] / A[i][e]
-                if l is None or m < mm:
+                if l is None or m < mm or (m == mm and i < l):
                     l = i
                     mm = m
 
