@@ -40,6 +40,12 @@ def problem_to_str(
     return ret
 
 
+def solution_to_str(N: IndexSet, x: Vector, z: Fraction) -> str:
+    return ", ".join(
+        f"{var} = {val}" for var, val in [(f"x_{i}", x[i]) for i in N] + [("z", z)]
+    )
+
+
 def pivot(
     N: IndexSet,
     B: IndexSet,
@@ -180,14 +186,18 @@ def simplex(
 ) -> Tuple[Vector, Fraction]:
     # initialize problem
     N, B, A, b, c, v = initialize(N, B, A, b, c)
+
     # solve problem
     N, B, A, b, c, v = solve(N, B, A, b, c, v)
+
     # return solution
     return b.copy(), v
 
 
-def main():
-    # example with initial basic feasible solution
+def ex1():
+    """
+    An example with an initial basic feasible solution.
+    """
     N = [1, 2, 3]
     B = [4, 5, 6]
     A = matrix(
@@ -199,8 +209,13 @@ def main():
     )
     b = vector([(4, Fraction(30)), (5, Fraction(24)), (6, Fraction(36))])
     c = vector([(1, Fraction(3)), (2, Fraction(1)), (3, Fraction(2))])
+    return N, B, A, b, c
 
-    # example without initial basic feasible solution
+
+def ex2():
+    """
+    An example without an initial basic feasible solution.
+    """
     N = [1, 2]
     B = [3, 4]
     A = matrix(
@@ -211,13 +226,19 @@ def main():
     )
     b = vector([(3, Fraction(2)), (4, Fraction(-4))])
     c = vector([(1, Fraction(2)), (2, Fraction(-1))])
+    return N, B, A, b, c
 
+
+def main():
+    print("**** Exmaple 1 ****\n")
+    N, B, A, b, c = ex1()
     x, z = simplex(N, B, A, b, c)
-    print(
-        ", ".join(
-            f"{var} = {val}" for var, val in [(f"x_{i}", x[i]) for i in N] + [("z", z)]
-        )
-    )
+    print(solution_to_str(N, x, z))
+
+    print("\n**** Exmaple 2 ****\n")
+    N, B, A, b, c = ex2()
+    x, z = simplex(N, B, A, b, c)
+    print(solution_to_str(N, x, z))
 
 
 if __name__ == "__main__":
