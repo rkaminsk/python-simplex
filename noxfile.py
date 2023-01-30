@@ -10,23 +10,23 @@ def format(session):
 
     autoflake_args = [
         "--in-place",
-        "--imports=clingo,clingox",
+        "--imports=simplex",
         "--ignore-init-module-imports",
         "--remove-unused-variables",
         "-r",
-        "clingox",
+        "simplex",
     ]
     if check:
         autoflake_args.remove("--in-place")
     session.run("autoflake", *autoflake_args)
 
-    isort_args = ["--profile", "black", "clingox"]
+    isort_args = ["--profile", "black", "simplex"]
     if check:
         isort_args.insert(0, "--check")
         isort_args.insert(1, "--diff")
     session.run("isort", *isort_args)
 
-    black_args = ["clingox"]
+    black_args = ["simplex"]
     if check:
         black_args.insert(0, "--check")
         black_args.insert(1, "--diff")
@@ -36,11 +36,11 @@ def format(session):
 @nox.session
 def lint_flake8(session):
     session.install("flake8", "flake8-black", "flake8-isort")
-    session.run("flake8", "clingox")
+    session.run("flake8", "simplex")
 
 
 @nox.session
-def lint_pylint(session, stable):
+def lint_pylint(session):
     session.install("pylint")
     session.run("pylint", "simplex")
 
