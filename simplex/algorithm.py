@@ -1,49 +1,8 @@
-from typing import List, DefaultDict, Sequence, Tuple
+from typing import Tuple
 from fractions import Fraction
 from collections import defaultdict
 
-Index = int
-IndexSet = List[int]
-Vector = DefaultDict[int, Fraction]
-Matrix = DefaultDict[int, Vector]
-
-
-def vector(elems: Sequence[Tuple[int, Fraction]] = []) -> Vector:
-    vec = defaultdict(lambda: Fraction(0))
-    for idx, val in elems:
-        vec[idx] = val
-    return vec
-
-
-def matrix(elems: Sequence[Tuple[int, Vector]] = []) -> Matrix:
-    mat: Matrix = defaultdict(vector)
-    for i, vec in elems:
-        mat[i] = vec
-    return mat
-
-
-def problem_to_str(
-    N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
-) -> str:
-    """
-    Convert the given linear problem into a readable string.
-    """
-    ret = f" z  = {float(v):7.2f} + "
-    ret += " + ".join(f"{float(c[j]):7.2f} x{j}" for j in sorted(N))
-    ret += "\n"
-    for i in sorted(B):
-        ret += f"x{i} = ".rjust(6)
-        ret += f"{float(b[i]):7.2f} - "
-        ret += " - ".join(f"{float(A[i][j]):7.2f} x{j}" for j in sorted(N))
-        ret += "\n"
-
-    return ret
-
-
-def solution_to_str(N: IndexSet, x: Vector, z: Fraction) -> str:
-    return ", ".join(
-        f"{var} = {val}" for var, val in [(f"x_{i}", x[i]) for i in N] + [("z", z)]
-    )
+from .program import vector, matrix, slack_form_to_str, Index, IndexSet, Vector, Matrix, VariableMap
 
 
 def pivot(
@@ -97,7 +56,7 @@ def pivot(
 
 
 def solve(
-    N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
+    M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
     while True:
         # select an entering variable
@@ -122,16 +81,15 @@ def solve(
             raise RuntimeError("problem is unbounded")
         print(f"after pivoting around {l} and {e}")
         N, B, A, b, c, v = pivot(N, B, A, b, c, v, l, e)
-        print(problem_to_str(N, B, A, b, c, v))
+        print(slack_form_to_str(M, N, B, A, b, c, v))
     return N, B, A, b, c, v
 
 
-def initialize(N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector):
-    v = Fraction(0)
+def initialize(M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction):
     l = min(b, key=b.get)
 
     print("initial problem:")
-    print(problem_to_str(N, B, A, b, c, v))
+    print(slack_form_to_str(M, N, B, A, b, c, v))
 
     # check if the basic solution is already feasible
     if b[l] >= 0:
@@ -141,14 +99,14 @@ def initialize(N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector):
     N.append(0)
     for i in B:
         A[i][0] = Fraction(-1)
-    c_orig, c = c, vector([(0, Fraction(-1))])
+    c_orig, v_orig, c = c, v, vector([(0, Fraction(-1))])
     N, B, A, b, c, v = pivot(N, B, A, b, c, v, l, 0)
 
     print("artificial problem:")
-    print(problem_to_str(N, B, A, b, c, v))
+    print(slack_form_to_str(M, N, B, A, b, c, v))
 
     # solve artificial problem
-    N, B, A, b, c, v = solve(N, B, A, b, c, v)
+    N, B, A, b, c, v = solve(M, N, B, A, b, c, v)
 
     if b[0] > 0:
         raise RuntimeError("problem is infeasible")
@@ -167,7 +125,7 @@ def initialize(N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector):
         A[i].pop(0, None)
 
     # restore the original objective function
-    c, v = vector(), Fraction(0)
+    c, v = vector(), v_orig
     for i, val in c_orig.items():
         if i in N:
             c[i] += val
@@ -177,23 +135,23 @@ def initialize(N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector):
                 c[j] -= c_orig[i] * A[i][j]
 
     print("initialized problem:")
-    print(problem_to_str(N, B, A, b, c, v))
+    print(slack_form_to_str(M, N, B, A, b, c, v))
     return N, B, A, b, c, v
 
 
 def simplex(
-    N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector
+    M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
 ) -> Tuple[Vector, Fraction]:
     # initialize problem
-    N, B, A, b, c, v = initialize(N, B, A, b, c)
+    N, B, A, b, c, v = initialize(M, N, B, A, b, c, v)
 
     # solve problem
-    N, B, A, b, c, v = solve(N, B, A, b, c, v)
+    N, B, A, b, c, v = solve(M, N, B, A, b, c, v)
 
     # return solution
     return b.copy(), v
 
-
+'''
 def ex1():
     """
     An example with an initial basic feasible solution.
@@ -243,3 +201,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''

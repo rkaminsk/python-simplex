@@ -77,6 +77,12 @@ def program_to_str(constraints: List[Constraint], objective: Objective) -> str:
     return ret
 
 
+def solution_to_str(M: VariableMap, N: IndexSet, x: Vector, z: Fraction) -> str:
+    return ", ".join(
+        f"{var} = {val}" for var, val in [(M[i], x[i]) for i in N] + [(M[-1], z)]
+    )
+
+
 def slack_form(constraints: List[Constraint], objective: Objective):
     """
     Convert the given linear program into slack form.

@@ -6,7 +6,7 @@ from fractions import Fraction
 from collections import defaultdict
 from typing import cast, DefaultDict, Iterator, Optional, List, Tuple, Union, Generator
 
-from program import program_to_str, slack_form, slack_form_to_str, Term, Constraint, Objective, Program, RawTerm
+from .program import Term, Constraint, Objective, Program, RawTerm
 
 class Parser:
     """
@@ -243,14 +243,8 @@ class Parser:
 
         return (cast(List[Term], term), t, -d[None])
 
-
-parser = Parser("(x + y+z)/7>=-5\nx-y=3\n#minimize 3+4+x")
-
-problem = parser.parse()
-print("linear program:")
-print(program_to_str(*problem))
-print()
-
-print("slack form:")
-sf = slack_form(*problem)
-print(slack_form_to_str(*sf))
+def parse(prg: str) -> Program:
+    """
+    Parse the given linear program.
+    """
+    return Parser(prg).parse()
