@@ -111,9 +111,6 @@ def initialize(
 ):
     l = min(b, key=b.get)
 
-    print("initial problem:")
-    print(slack_form_to_str(M, N, B, A, b, c, v))
-
     # check if the basic solution is already feasible
     if b[l] >= 0:
         return N, B, A, b, c, v

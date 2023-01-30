@@ -20,9 +20,10 @@ def main():
     print(program_to_str(*lp))
     print()
 
-    print("slack form:")
     sf = slack_form(*lp)
+    print("initial problem:")
     print(slack_form_to_str(*sf))
+
 
     sol = simplex(*sf)
     print("solution:")
