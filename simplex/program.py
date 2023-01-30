@@ -110,7 +110,7 @@ def slack_form(constraints: List[Constraint], objective: Objective):
     # extract variables
     def add_var(lhs):
         nonlocal M, N
-        for co, var in lhs:
+        for _, var in lhs:
             if var not in M:
                 M[var] = len(M) + 1
                 N.append(M[var])

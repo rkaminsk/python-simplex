@@ -1,3 +1,6 @@
+"""
+Main application to solve linear programs.
+"""
 import sys
 
 from .program import program_to_str, slack_form, slack_form_to_str, solution_to_str
@@ -6,6 +9,9 @@ from .algorithm import simplex
 
 
 def main():
+    """
+    Read and solve linear pogram.
+    """
     if len(sys.argv) == 1:
         prg = sys.stdin.read()
     elif len(sys.argv) == 2:
