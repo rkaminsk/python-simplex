@@ -135,7 +135,7 @@ def slack_form(constraints: List[Constraint], objective: Objective):
         return M[f"y_{s}"]
 
     # add artificial variable
-    aux_var(0)
+    aux_var(-1)
 
     # build coefficient matrix
     def add_row(lhs, rhs, mul):
@@ -156,9 +156,9 @@ def slack_form(constraints: List[Constraint], objective: Objective):
 
     # build objective
     if "z" not in M:
-        M["z"] = -1
+        M["z"] = 0
     else:
-        aux_var(-1)
+        aux_var(0)
     for co, var in objective[1]:
         c[M[var]] = co
 
