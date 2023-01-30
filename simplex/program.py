@@ -1,3 +1,6 @@
+"""
+Basic definitions and functions for linear programs.
+"""
 from typing import List, DefaultDict, Dict, Sequence, Tuple
 from fractions import Fraction
 from collections import defaultdict
@@ -72,7 +75,7 @@ def program_to_str(constraints: List[Constraint], objective: Objective) -> str:
 
     v, c = objective
     ret = ""
-    for i, (lhs, rel, b) in enumerate(constraints):
+    for lhs, rel, b in constraints:
         ret += " + ".join(simp(co, var) for co, var in lhs)
         ret += f" {rel} {b}"
         ret += "\n"
