@@ -6,7 +6,16 @@ from .algorithm import simplex
 
 
 def main():
-    lp = parse(sys.stdin.read())
+    if len(sys.argv) == 1:
+        prg = sys.stdin.read()
+    elif len(sys.argv) == 2:
+        with open(sys.argv[1]) as hnd:
+            prg = hnd.read()
+    else:
+        print("usage: simplex [file]")
+        sys.exit(1)
+
+    lp = parse(prg)
     print("linear program:")
     print(program_to_str(*lp))
     print()
