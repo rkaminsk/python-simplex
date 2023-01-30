@@ -1,7 +1,5 @@
-from typing import Tuple
+from typing import cast, Callable, Tuple
 from fractions import Fraction
-from collections import defaultdict
-
 from .program import (
     vector,
     matrix,
@@ -74,6 +72,7 @@ def solve(
     v: Fraction,
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
     while True:
+        # pylint: disable=undefined-loop-variable
         # select an entering variable
         for e in sorted(N):
             if c[e] > 0:
@@ -109,7 +108,7 @@ def initialize(
     c: Vector,
     v: Fraction,
 ):
-    l = min(b, key=b.get)
+    l = min(b, key=cast(Callable[[int], Fraction], b.get))
 
     # check if the basic solution is already feasible
     if b[l] >= 0:

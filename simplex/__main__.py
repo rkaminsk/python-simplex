@@ -15,6 +15,7 @@ def main():
     if len(sys.argv) == 1:
         prg = sys.stdin.read()
     elif len(sys.argv) == 2:
+        # pylint: disable=unspecified-encoding
         with open(sys.argv[1]) as hnd:
             prg = hnd.read()
     else:

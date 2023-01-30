@@ -109,7 +109,8 @@ class Parser:
         self._lexer = self._lex(prg)
         self._current = next(self._lexer)
 
-    def _lex(self, line: str) -> Generator[Tuple[str, str], None, None]:
+    @staticmethod
+    def _lex(line: str) -> Generator[Tuple[str, str], None, None]:
         """
         The tokenizer for the parser.
         """
