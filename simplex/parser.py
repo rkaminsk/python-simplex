@@ -2,11 +2,11 @@
 A parser to read the string representation of a linear program.
 """
 import re
-from fractions import Fraction
 from collections import defaultdict
-from typing import cast, DefaultDict, Iterator, Optional, List, Tuple, Union, Generator
+from fractions import Fraction
+from typing import DefaultDict, Generator, Iterator, List, Optional, Tuple, Union, cast
 
-from .program import Term, Constraint, Objective, Program
+from .program import Constraint, Objective, Program, Term
 
 RawTerm = List[Tuple[Fraction, Optional[str]]]
 

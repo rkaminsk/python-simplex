@@ -3,9 +3,9 @@ Main application to solve linear programs.
 """
 import sys
 
-from .program import program_to_str, slack_form, slack_form_to_str, solution_to_str
-from .parser import parse
 from .algorithm import simplex
+from .parser import parse
+from .program import program_to_str, slack_form, slack_form_to_str, solution_to_str
 
 
 def main():

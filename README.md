@@ -6,4 +6,3 @@ Introduction to Algorithms.
 ## Usage
 
     python -m simplex examples/ex01.lp
-

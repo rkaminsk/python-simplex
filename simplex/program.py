@@ -1,9 +1,9 @@
 """
 Basic definitions and functions for linear programs.
 """
-from typing import List, DefaultDict, Dict, Sequence, Tuple
-from fractions import Fraction
 from collections import defaultdict
+from fractions import Fraction
+from typing import DefaultDict, Dict, List, Sequence, Tuple
 
 Term = Tuple[Fraction, str]
 Constraint = Tuple[List[Term], str, Fraction]

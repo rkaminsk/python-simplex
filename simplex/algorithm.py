@@ -1,14 +1,19 @@
-from typing import cast, Callable, Tuple
+"""
+The main simplex algorithm.
+"""
+
 from fractions import Fraction
+from typing import Callable, Tuple, cast
+
 from .program import (
-    vector,
-    matrix,
-    slack_form_to_str,
     Index,
     IndexSet,
-    Vector,
     Matrix,
     VariableMap,
+    Vector,
+    matrix,
+    slack_form_to_str,
+    vector,
 )
 
 
@@ -22,6 +27,9 @@ def pivot(
     l: Index,
     e: Index,
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
+    """
+    Pivot around the given leaving and entering variables.
+    """
     An = matrix()
     bn = vector()
     cn = vector()
@@ -71,6 +79,9 @@ def solve(
     c: Vector,
     v: Fraction,
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
+    """
+    Solve a linear program in canonical form.
+    """
     while True:
         # pylint: disable=undefined-loop-variable
         # select an entering variable
@@ -108,6 +119,9 @@ def initialize(
     c: Vector,
     v: Fraction,
 ):
+    """
+    Bring a linear program in slack form into canonical form.
+    """
     l = min(b, key=cast(Callable[[int], Fraction], b.get))
 
     # check if the basic solution is already feasible
@@ -167,6 +181,9 @@ def simplex(
     c: Vector,
     v: Fraction,
 ) -> Tuple[Vector, Fraction]:
+    """
+    Solve a linear program in slack form.
+    """
     # initialize problem
     N, B, A, b, c, v = initialize(M, N, B, A, b, c, v)
 
