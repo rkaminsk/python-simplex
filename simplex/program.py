@@ -124,15 +124,15 @@ def slack_form(constraints: List[Constraint], objective: Objective):
 
     def aux_var(fixed=None):
         nonlocal s
-        while f"x_{s}" in M:
+        while f"y_{s}" in M:
             s += 1
         if fixed is None:
-            M[f"x_{s}"] = len(M) + 1
-            B.append(M[f"x_{s}"])
+            M[f"y_{s}"] = len(M) + 1
+            B.append(M[f"y_{s}"])
         else:
-            M[f"x_{s}"] = fixed
+            M[f"y_{s}"] = fixed
 
-        return M[f"x_{s}"]
+        return M[f"y_{s}"]
 
     # add artificial variable
     aux_var(0)
