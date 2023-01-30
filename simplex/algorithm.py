@@ -2,7 +2,16 @@ from typing import Tuple
 from fractions import Fraction
 from collections import defaultdict
 
-from .program import vector, matrix, slack_form_to_str, Index, IndexSet, Vector, Matrix, VariableMap
+from .program import (
+    vector,
+    matrix,
+    slack_form_to_str,
+    Index,
+    IndexSet,
+    Vector,
+    Matrix,
+    VariableMap,
+)
 
 
 def pivot(
@@ -56,7 +65,13 @@ def pivot(
 
 
 def solve(
-    M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
+    M: VariableMap,
+    N: IndexSet,
+    B: IndexSet,
+    A: Matrix,
+    b: Vector,
+    c: Vector,
+    v: Fraction,
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
     while True:
         # select an entering variable
@@ -85,7 +100,15 @@ def solve(
     return N, B, A, b, c, v
 
 
-def initialize(M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction):
+def initialize(
+    M: VariableMap,
+    N: IndexSet,
+    B: IndexSet,
+    A: Matrix,
+    b: Vector,
+    c: Vector,
+    v: Fraction,
+):
     l = min(b, key=b.get)
 
     print("initial problem:")
@@ -140,7 +163,13 @@ def initialize(M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c
 
 
 def simplex(
-    M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
+    M: VariableMap,
+    N: IndexSet,
+    B: IndexSet,
+    A: Matrix,
+    b: Vector,
+    c: Vector,
+    v: Fraction,
 ) -> Tuple[Vector, Fraction]:
     # initialize problem
     N, B, A, b, c, v = initialize(M, N, B, A, b, c, v)

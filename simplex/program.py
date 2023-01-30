@@ -36,7 +36,13 @@ def matrix(elems: Sequence[Tuple[int, Vector]] = ()) -> Matrix:
 
 
 def slack_form_to_str(
-    M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c: Vector, v: Fraction
+    M: VariableMap,
+    N: IndexSet,
+    B: IndexSet,
+    A: Matrix,
+    b: Vector,
+    c: Vector,
+    v: Fraction,
 ) -> str:
     """
     Convert the given linear program in slack form into a readable string.
@@ -57,6 +63,7 @@ def program_to_str(constraints: List[Constraint], objective: Objective) -> str:
     """
     Convert the given linear program into a readable string representation.
     """
+
     def simp(co, var):
         if co == 1:
             return var
@@ -112,17 +119,18 @@ def slack_form(constraints: List[Constraint], objective: Objective):
 
     # create auxiliary variables
     s = 0
-    def aux_var(fixed = None):
+
+    def aux_var(fixed=None):
         nonlocal s
-        while f'x_{s}' in M:
+        while f"x_{s}" in M:
             s += 1
         if fixed is None:
-            M[f'x_{s}'] = len(M) + 1
-            B.append(M[f'x_{s}'])
+            M[f"x_{s}"] = len(M) + 1
+            B.append(M[f"x_{s}"])
         else:
-            M[f'x_{s}'] = fixed
+            M[f"x_{s}"] = fixed
 
-        return M[f'x_{s}']
+        return M[f"x_{s}"]
 
     # add artificial variable
     aux_var(0)
@@ -145,8 +153,8 @@ def slack_form(constraints: List[Constraint], objective: Objective):
             add_row(lhs, rhs, -1)
 
     # build objective
-    if 'z' not in M:
-        M['z'] = -1
+    if "z" not in M:
+        M["z"] = -1
     else:
         aux_var(-1)
     for co, var in objective[1]:

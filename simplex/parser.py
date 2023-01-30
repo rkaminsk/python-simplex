@@ -8,6 +8,7 @@ from typing import cast, DefaultDict, Iterator, Optional, List, Tuple, Union, Ge
 
 from .program import Term, Constraint, Objective, Program, RawTerm
 
+
 class Parser:
     """
     Simplistic parser for the grammar below.
@@ -22,6 +23,7 @@ class Parser:
     Note that only _constraints that can be transformed into linear terms (in a
     straightforward manner) are accepted.
     """
+
     _lexer: Iterator[Tuple[str, str]]
     _current: Tuple[str, str]
 
@@ -242,6 +244,7 @@ class Parser:
             return (d[None], cast(List[Term], term))
 
         return (cast(List[Term], term), t, -d[None])
+
 
 def parse(prg: str) -> Program:
     """
