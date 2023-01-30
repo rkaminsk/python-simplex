@@ -1,4 +1,4 @@
-from typing import List, DefaultDict, Dict, Optional, Sequence, Tuple
+from typing import List, DefaultDict, Dict, Sequence, Tuple
 from fractions import Fraction
 from collections import defaultdict
 
@@ -6,7 +6,6 @@ Term = Tuple[Fraction, str]
 Constraint = Tuple[List[Term], str, Fraction]
 Objective = Tuple[Fraction, List[Term]]
 Program = Tuple[List[Constraint], Objective]
-RawTerm = List[Tuple[Fraction, Optional[str]]]
 VariableMap = Dict[int, str]
 
 Index = int

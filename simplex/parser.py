@@ -6,7 +6,82 @@ from fractions import Fraction
 from collections import defaultdict
 from typing import cast, DefaultDict, Iterator, Optional, List, Tuple, Union, Generator
 
-from .program import Term, Constraint, Objective, Program, RawTerm
+from .program import Term, Constraint, Objective, Program
+
+RawTerm = List[Tuple[Fraction, Optional[str]]]
+
+
+def _negate(term: RawTerm) -> RawTerm:
+    """
+    Negate the given term.
+    """
+    for i, (n, v) in enumerate(term):
+        term[i] = (-n, v)
+    return term
+
+
+def _to_number(term: RawTerm) -> Fraction:
+    """
+    Convert the given term to a number or raise an error.
+    """
+    ret = Fraction(0)
+    for n, v in term:
+        if v is not None:
+            raise RuntimeError("number expected")
+        ret += n
+    return ret
+
+
+def _divide(lhs: RawTerm, rhs: RawTerm) -> RawTerm:
+    """
+    Devide the given terms lhs by the term rhs.
+
+    The term rhs must evaluate to a number.
+    """
+    den = _to_number(rhs)
+    for i, (n, v) in enumerate(lhs):
+        lhs[i] = (n / den, v)
+    return lhs
+
+
+def _multiply(lhs: RawTerm, rhs: RawTerm) -> RawTerm:
+    """
+    Multiply the given terms.
+
+    Raises an error if the term becomes nonlinear.
+    """
+    ret = []
+    for n, v in lhs:
+        for m, w in rhs:
+            if w is None:
+                ret.append((n * m, v))
+            elif v is None:
+                ret.append((n * m, w))
+            else:
+                raise RuntimeError("linear term expected")
+    return ret
+
+
+def _simplify(term: RawTerm, t: str) -> Union[Constraint, Objective]:
+    """
+    Simplify the given constraint or objective function combining
+    coefficients.
+    """
+    d: DefaultDict[Optional[str], Fraction]
+    d = defaultdict(Fraction)
+    for n, v in term:
+        d[v] += n
+    term = [(n, v) for v, n in d.items() if v is not None]
+
+    if t == "#minimize":
+        t = "#maximize"
+        d[None] *= -1
+        term = _negate(term)
+
+    if t == "#maximize":
+        return (d[None], cast(List[Term], term))
+
+    return (cast(List[Term], term), t, -d[None])
 
 
 class Parser:
@@ -107,7 +182,7 @@ class Parser:
         """
         c = self._constraints()
         t = self._expect("objective")
-        o = self._simplify(self._sum_term(), t)
+        o = _simplify(self._sum_term(), t)
         while self._accept("newline"):
             pass
         self._expect("eof")
@@ -131,7 +206,7 @@ class Parser:
         lhs = self._sum_term()
         rel = self._expect("relation")
         rhs = self._sum_term()
-        return cast(Constraint, self._simplify(lhs + self._negate(rhs), rel))
+        return cast(Constraint, _simplify(lhs + _negate(rhs), rel))
 
     def _sum_term(self) -> RawTerm:
         """
@@ -143,7 +218,7 @@ class Parser:
             return lhs + rhs
         if self._accept("operator", "-"):
             rhs = self._sum_term()
-            return lhs + self._negate(rhs)
+            return lhs + _negate(rhs)
         return lhs
 
     def _mul_term(self) -> RawTerm:
@@ -153,10 +228,10 @@ class Parser:
         lhs = self._term()
         if self._accept("operator", "/"):
             rhs = self._mul_term()
-            return self._divide(lhs, rhs)
+            return _divide(lhs, rhs)
         if self._accept("operator", "*"):
             rhs = self._mul_term()
-            return self._multiply(lhs, rhs)
+            return _multiply(lhs, rhs)
         return lhs
 
     def _term(self) -> RawTerm:
@@ -165,7 +240,7 @@ class Parser:
         """
         if self._accept("operator", "-"):
             term = self._sum_term()
-            return self._negate(term)
+            return _negate(term)
         if self._accept("parenthesis", "("):
             term = self._sum_term()
             self._expect("parenthesis", ")")
@@ -176,74 +251,6 @@ class Parser:
         if kind == "identifier":
             return [(Fraction(1), val)]
         raise RuntimeError("number or variable expected")
-
-    def _negate(self, term: RawTerm) -> RawTerm:
-        """
-        Negate the given term.
-        """
-        for i, (n, v) in enumerate(term):
-            term[i] = (-n, v)
-        return term
-
-    def _to_number(self, term: RawTerm) -> Fraction:
-        """
-        Convert the given term to a number or raise an error.
-        """
-        ret = Fraction(0)
-        for n, v in term:
-            if v is not None:
-                raise RuntimeError("number expected")
-            ret += n
-        return ret
-
-    def _divide(self, lhs: RawTerm, rhs: RawTerm) -> RawTerm:
-        """
-        Devide the given terms lhs by the term rhs.
-
-        The term rhs must evaluate to a number.
-        """
-        den = self._to_number(rhs)
-        for i, (n, v) in enumerate(lhs):
-            lhs[i] = (n / den, v)
-        return lhs
-
-    def _multiply(self, lhs: RawTerm, rhs: RawTerm) -> RawTerm:
-        """
-        Multiply the given terms.
-
-        Raises an error if the term becomes nonlinear.
-        """
-        ret = []
-        for n, v in lhs:
-            for m, w in rhs:
-                if w is None:
-                    ret.append((n * m, v))
-                elif v is None:
-                    ret.append((n * m, w))
-                else:
-                    raise RuntimeError("linear term expected")
-        return ret
-
-    def _simplify(self, term: RawTerm, t: str) -> Union[Constraint, Objective]:
-        """
-        Simplify the given constraint or objective function combining
-        coefficients.
-        """
-        d: DefaultDict[Optional[str], Fraction]
-        d = defaultdict(Fraction)
-        for n, v in term:
-            d[v] += n
-        term = [(n, v) for v, n in d.items() if v is not None]
-
-        if t == "#minimize":
-            t = "#maximize"
-            d[None] *= -1
-            term = self._negate(term)
-
-        if t == "#maximize":
-            return (d[None], cast(List[Term], term))
-
-        return (cast(List[Term], term), t, -d[None])
 
 
 def parse(prg: str) -> Program:

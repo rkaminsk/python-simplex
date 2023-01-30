@@ -24,7 +24,6 @@ def main():
     print("initial problem:")
     print(slack_form_to_str(*sf))
 
-
     sol = simplex(*sf)
     print("solution:")
     print(solution_to_str(*sf[:2], *sol))
