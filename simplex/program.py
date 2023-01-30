@@ -65,19 +65,21 @@ def program_to_str(constraints: List[Constraint], objective: Objective) -> str:
         return f"{co} {var}"
 
     v, c = objective
-    ret = "#maximize "
-    ret += " + ".join([f"{v}"] + [simp(co, var) for co, var in c])
-    ret += "\n"
+    ret = ""
     for i, (lhs, rel, b) in enumerate(constraints):
-        if i > 0:
-            ret += "\n"
         ret += " + ".join(simp(co, var) for co, var in lhs)
         ret += f" {rel} {b}"
+        ret += "\n"
+    ret += "#maximize "
+    ret += " + ".join(([f"{v}"] if v != 0 else []) + [simp(co, var) for co, var in c])
 
     return ret
 
 
 def solution_to_str(M: VariableMap, N: IndexSet, x: Vector, z: Fraction) -> str:
+    """
+    Convert the given solution into a readable string.
+    """
     return ", ".join(
         f"{var} = {val}" for var, val in [(M[i], x[i]) for i in N] + [(M[-1], z)]
     )

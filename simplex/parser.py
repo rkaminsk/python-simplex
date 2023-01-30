@@ -38,7 +38,7 @@ class Parser:
         """
         n = 0
         regexp = re.compile(
-            r"(?P<number>[1-9]+)|"
+            r"(?P<number>[0-9]+)|"
             r"(?P<identifier>[a-zA-Z][a-zA-Z_0-9]*)|"
             r"(?P<operator>[-+*/])|"
             r"(?P<relation>>=|<=|=)|"

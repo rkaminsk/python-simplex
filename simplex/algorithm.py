@@ -79,7 +79,7 @@ def solve(
         # do the pivot if the problem is bounded
         if l is None:
             raise RuntimeError("problem is unbounded")
-        print(f"after pivoting around {l} and {e}")
+        print(f"after pivoting around {M[l]} and {M[e]}")
         N, B, A, b, c, v = pivot(N, B, A, b, c, v, l, e)
         print(slack_form_to_str(M, N, B, A, b, c, v))
     return N, B, A, b, c, v
@@ -96,7 +96,7 @@ def initialize(M: VariableMap, N: IndexSet, B: IndexSet, A: Matrix, b: Vector, c
         return N, B, A, b, c, v
 
     # construct artificial problem
-    N.append(0)
+    N = N + [0]
     for i in B:
         A[i][0] = Fraction(-1)
     c_orig, v_orig, c = c, v, vector([(0, Fraction(-1))])
@@ -150,55 +150,3 @@ def simplex(
 
     # return solution
     return b.copy(), v
-
-'''
-def ex1():
-    """
-    An example with an initial basic feasible solution.
-    """
-    N = [1, 2, 3]
-    B = [4, 5, 6]
-    A = matrix(
-        [
-            (4, vector([(1, Fraction(1)), (2, Fraction(1)), (3, Fraction(3))])),
-            (5, vector([(1, Fraction(2)), (2, Fraction(2)), (3, Fraction(5))])),
-            (6, vector([(1, Fraction(4)), (2, Fraction(1)), (3, Fraction(2))])),
-        ]
-    )
-    b = vector([(4, Fraction(30)), (5, Fraction(24)), (6, Fraction(36))])
-    c = vector([(1, Fraction(3)), (2, Fraction(1)), (3, Fraction(2))])
-    return N, B, A, b, c
-
-
-def ex2():
-    """
-    An example without an initial basic feasible solution.
-    """
-    N = [1, 2]
-    B = [3, 4]
-    A = matrix(
-        [
-            (3, vector([(1, Fraction(2)), (2, Fraction(-1))])),
-            (4, vector([(1, Fraction(1)), (2, Fraction(-5))])),
-        ]
-    )
-    b = vector([(3, Fraction(2)), (4, Fraction(-4))])
-    c = vector([(1, Fraction(2)), (2, Fraction(-1))])
-    return N, B, A, b, c
-
-
-def main():
-    print("**** Exmaple 1 ****\n")
-    N, B, A, b, c = ex1()
-    x, z = simplex(N, B, A, b, c)
-    print(solution_to_str(N, x, z))
-
-    print("\n**** Exmaple 2 ****\n")
-    N, B, A, b, c = ex2()
-    x, z = simplex(N, B, A, b, c)
-    print(solution_to_str(N, x, z))
-
-
-if __name__ == "__main__":
-    main()
-'''
