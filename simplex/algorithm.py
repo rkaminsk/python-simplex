@@ -81,6 +81,23 @@ def solve(
 ) -> Tuple[IndexSet, IndexSet, Matrix, Vector, Vector, Fraction]:
     """
     Solve a linear program in canonical form.
+
+    This function selects an entering variable x_e among the non-basic variables
+    that appears with a positive coefficient in the objective function. Since
+    non-basic variables are currently pinned to value 0, pivoting it will
+    assign a new value greater or equal to zero (zero if the pivot is
+    degenerative).
+
+    We then try to find a leaving variable x_l among the basic variables whose
+    value can be lowered to zero such that the value of x_e increases. We
+    increase x_e as much as we can ensuring that all basic variables are
+    greater or equal to zero and the selected leaving variable is zero.
+
+    We can then flip the roles of leaving and entering variables.
+
+    This function just selects two suitable variables and then calls the pivot
+    function to take care of rewriting the tableau. The actual assignemnt to
+    variables is implicitely encoded in the tableau.
     """
     while True:
         # pylint: disable=undefined-loop-variable
