@@ -13,7 +13,6 @@ from .parser import parse
 from .program import (
     IndexSet,
     Matrix,
-    VariableMap,
     Vector,
     program_to_str,
     slack_form,
@@ -25,7 +24,6 @@ from .revised import simplex as revised_simplex
 
 
 def _revised_simplex(
-    M: VariableMap,  # pylint: disable=unused-argument
     N: IndexSet,
     B: IndexSet,
     A: Matrix,
@@ -91,7 +89,7 @@ def main():
     print(slack_form_to_str(*sf))
 
     if args.revised:
-        sol = _revised_simplex(*sf)
+        sol = _revised_simplex(*sf[1:])
     else:
         sol = simplex(*sf)
 
