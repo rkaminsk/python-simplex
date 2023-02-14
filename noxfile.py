@@ -41,11 +41,11 @@ def lint_flake8(session):
 
 @nox.session
 def lint_pylint(session):
-    session.install("pylint")
+    session.install("pylint", "numpy")
     session.run("pylint", "simplex")
 
 
 @nox.session
 def typecheck(session):
-    session.install("mypy")
+    session.install("mypy", "numpy")
     session.run("mypy", "-p", "simplex")

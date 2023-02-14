@@ -14,3 +14,11 @@ setup(
     zip_safe=False,
     python_requires=">=3.7",
 )
+
+"""
+This is provided for compatibility.
+"""
+from setuptools import setup
+
+setup()
+
