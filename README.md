@@ -1,7 +1,10 @@
 # Simplex Implementation in Python
 
 Educational simplex implementation as described in Charpter 29 of the book
-Introduction to Algorithms.
+[Introduction to Algorithms][algorithms].
+
+Furthermore, the [revised simplex alogorithm][revised] as presented on
+Wikipedia is implemented. Again this is meant for educational purposes.
 
 ## Usage
 
@@ -10,6 +13,7 @@ There are some examples, which can be run as listed below:
     python -m simplex examples/ex01.lp
     python -m simplex examples/ex02.lp
     python -m simplex examples/ex03.lp
+    python -m simplex -r examples/ex01.lp
 
 ## Development
 
@@ -46,3 +50,5 @@ The latter command can be used to inspect changes before applying them.
 [nox]: https://nox.thea.codes/en/stable/index.html
 [pre]: https://pre-commit.com/
 [black]: https://black.readthedocs.io/en/stable/
+[algorithms]: https://mitpress.mit.edu/books/introduction-algorithms
+[revised]: https://en.wikipedia.org/wiki/Revised_simplex_method
