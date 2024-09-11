@@ -36,10 +36,9 @@ def _revised_simplex(
     x = revised.vec([b[i] for i in B])
     z = revised.vec([-c[j] for j in N])
 
-    nn = [j + 1 for j in range(len(N))]
-    bb = [i + 1 + len(N) for i in range(len(B))]
-
-    revised.print_solution(nn, bb, x, z, *revised.solve(a, nn, bb, x, z))
+    if v != 0:
+        print(f"reported bounds are offset by {v}")
+    revised.print_solution(N, B, x, z, *revised.solve(a, N, B, x, z))
 
 
 def main():

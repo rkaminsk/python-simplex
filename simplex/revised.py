@@ -35,18 +35,17 @@ def vec(x):
     return mat([x]).trans()
 
 
-def extract(idx, m):
+def extract(rev, idx, m):
     """
     Extract the given columns from the matrix.
     """
-    # FIXME: this is not correct and only works if the indices are sorted intially starting with 1
     res = []
     for i in idx:
-        res.append(list(m.col(i - 1)))
+        res.append(list(m.col(rev[i])))
     return mat(res).trans()
 
 
-def solve_primal(m_a, i_n, i_b, v_x, v_z):
+def solve_primal(rev, m_a, i_n, i_b, v_x, v_z):
     """
     Simplex implementation asssuming that the input is primal feasible.
     """
@@ -62,8 +61,8 @@ def solve_primal(m_a, i_n, i_b, v_x, v_z):
         j, z = min(enumerate(v_z.col(0)), key=lambda x: x[1])
         if z >= 0:
             break
-        m_b = extract(i_b, m_a)
-        m_n = extract(i_n, m_a)
+        m_b = extract(rev, i_b, m_a)
+        m_n = extract(rev, i_n, m_a)
         d_x = (m_b.inv() * m_n).colvec(j)
         if all(a <= 0 for a in d_x.col(0)):
             res = Result.UNBOUNDED
@@ -81,7 +80,7 @@ def solve_primal(m_a, i_n, i_b, v_x, v_z):
     return res, i_n, i_b, v_x, v_z
 
 
-def solve_dual(m_a, i_n, i_b, v_x, v_z):
+def solve_dual(rev, m_a, i_n, i_b, v_x, v_z):
     """
     Simplex implementation asssuming that the input is dual feasible.
     """
@@ -97,8 +96,8 @@ def solve_dual(m_a, i_n, i_b, v_x, v_z):
         i, x = min(enumerate(v_x.col(0)), key=lambda x: x[1])
         if x >= 0:
             break
-        m_b = extract(i_b, m_a)
-        m_n = extract(i_n, m_a)
+        m_b = extract(rev, i_b, m_a)
+        m_n = extract(rev, i_n, m_a)
         d_z = -(m_b.inv() * m_n).trans().colvec(i)
         if all(a <= 0 for a in d_z.col(0)):
             res = Result.UNBOUNDED
@@ -120,15 +119,21 @@ def solve(m_a, i_n, i_b, v_x, v_z):
     """
     A two-phase solve implementation.
     """
+    rev = {}
+    for j, t in enumerate(i_n):
+        rev[t] = j
+    for i, t in enumerate(i_b):
+        rev[t] = i + len(i_n)
+
     primal_feasible = all(x >= 0 for x in v_x.col(0))
     dual_feasible = all(z >= 0 for z in v_z.col(0))
     if primal_feasible and dual_feasible:
         return Result.BOUNDED, i_n.copy(), i_b.copy(), v_x.copy(), v_z.copy()
     if primal_feasible:
-        return solve_primal(m_a, i_n, i_b, v_x, v_z)
+        return solve_primal(rev, m_a, i_n, i_b, v_x, v_z)
 
     s_z = v_z if dual_feasible else vec([1 for _ in v_z.col(0)])
-    res, d_n, d_b, d_x, d_z = solve_dual(m_a, i_n, i_b, v_x, s_z)
+    res, d_n, d_b, d_x, d_z = solve_dual(rev, m_a, i_n, i_b, v_x, s_z)
     # if the dual solution is unbounded, d_x does not capture a primal solution
     if res == Result.UNBOUNDED:
         res = Result.INFEASIBLE
@@ -139,12 +144,12 @@ def solve(m_a, i_n, i_b, v_x, v_z):
     def val(t):
         return -v_z[i_n.index(t)][0] if t in i_n else 0
 
-    m_n = extract(d_n, m_a)
-    m_b = extract(d_b, m_a)
+    m_n = extract(rev, d_n, m_a)
+    m_b = extract(rev, d_b, m_a)
     c_n = [val(t) for t in d_n]
     c_b = [val(t) for t in d_b]
     r_z = (m_b.inv() * m_n).trans() * vec(c_b) - vec(c_n)
-    return solve_primal(m_a, d_n, d_b, d_x, r_z)
+    return solve_primal(rev, m_a, d_n, d_b, d_x, r_z)
 
 
 def print_solution(i_n, i_b, v_x, v_z, res, s_n, s_b, s_x, s_z):
@@ -170,7 +175,7 @@ def print_solution(i_n, i_b, v_x, v_z, res, s_n, s_b, s_x, s_z):
         rp = ps("x", i_n, v_z, s_b, s_x)
         print(f"lower: {rp}")
         if res == Result.BOUNDED:
-            rd = -ps("z", i_b, v_x, s_n, s_z)
+            rd = -ps("y", i_b, v_x, s_n, s_z)
             print(f"upper: {rd}")
             assert rp == rd
     print("**************************")
