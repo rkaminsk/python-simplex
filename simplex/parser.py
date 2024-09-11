@@ -98,8 +98,6 @@ class Parser:
     NegTerm     ::= '-' NegTerm | Term
     Term        ::= Number | Variable | ( SumTerm )
 
-
-
     Note that only _constraints that can be transformed into linear terms (in a
     straightforward manner) are accepted.
     """
