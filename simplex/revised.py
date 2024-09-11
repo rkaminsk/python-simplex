@@ -39,6 +39,7 @@ def extract(idx, m):
     """
     Extract the given columns from the matrix.
     """
+    # FIXME: this is not correct and only works if the indices are sorted intially starting with 1
     res = []
     for i in idx:
         res.append(list(m.col(i - 1)))
@@ -218,4 +219,5 @@ def main():
     print_solution(i_n, i_b, v_x, v_z, *solve(m_a, i_n, i_b, v_x, v_z))
 
 
-main()
+if __name__ == "__main__":
+    main()
