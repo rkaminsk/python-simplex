@@ -1,116 +1,221 @@
 """
-This module implements the revised simplex algorithm as presented on Wikipedia:
+The revised solve algorithm.
 
-    https://en.wikipedia.org/wiki/Revised_simplex_method
-
-It proceeds the same way as the standard one but moves the computation from the
-pivot function to the variable selection. In practice, the algorithm is
-numerically more stable and the tableau stays sparse.
-
-However, the current implementation uses library functionality to inverse the
-basis matrix. In practice, some LU decomposition based algorithm should be used
-that incrementally updates the inverse.
-
-Note: the way global variables are used here is really ugly and should be
-improved.
+Provides a primal and a dual version as well as a two-phase variant to solve
+problem that have no intial feasible solutions.
 """
 
-import numpy as np
-import numpy.linalg as npl
+from enum import Enum
+from fractions import Fraction
 
-E = np.finfo(float).eps
+import pymatrix
 
 
-def pivot(N, B, q, p):
+class Result(Enum):
     """
-    Pivot columns.
+    Capture possible result states of the solve algorigthm.
     """
-    N.remove(q)
-    B.remove(p)
-    N.append(p)
-    B.append(q)
+
+    BOUNDED = 1
+    UNBOUNDED = 2
+    INFEASIBLE = 3
 
 
-def initialize(A, N, B, b, c):
+def mat(x):
     """
-    Bring a linear program in slack form into canonical form.
+    Construct a matrix given as list of rows.
     """
-    p = np.argmin(b)
-
-    # check if the basic solution is already feasible
-    if b[p] >= -E:
-        return
-
-    # construct artificial problem
-    a = A.shape[1]
-    N.append(a)
-    col = [[-1.0]] * len(B)
-    A = np.append(A, col, axis=1)
-    c = np.zeros(len(N) + len(B))
-    c[-1] = 1
-    pivot(N, B, a, B[p])
-
-    # solve artificial problem
-    x, z = solve(A, N, B, b, c)
-
-    if a in B:
-        p = B.index(a)
-        if x[p] > E:
-            raise RuntimeError("problem is infeasible")
-        q = min(i for i, s_i in enumerate(z) if s_i > E)
-        pivot(N, B, N[q], B[p])
-
-    # remove artificial variable
-    N.remove(a)
+    return pymatrix.Matrix.from_list([[Fraction(v) for v in r] for r in x])
 
 
-def solve(A, N, B, b, c):
+def vec(x):
     """
-    Solve linear program in canonical form.
-
-    The basis must be invertible and `B^-1 * b >= 0`.
+    Construct a vector given as list.
     """
-    it = 0
+    return mat([x]).trans()
+
+
+def extract(idx, m):
+    """
+    Extract the given columns from the matrix.
+    """
+    res = []
+    for i in idx:
+        res.append(list(m.col(i - 1)))
+    return mat(res).trans()
+
+
+def solve_primal(m_a, i_n, i_b, v_x, v_z):
+    """
+    Simplex implementation asssuming that the input is primal feasible.
+    """
+    assert all(x >= 0 for x in v_x.col(0))
+
+    i_n = i_n.copy()
+    i_b = i_b.copy()
+    v_x = v_x.copy()
+    v_z = v_z.copy()
+    res = Result.BOUNDED
+
     while True:
-        it += 1
-        print(f"iteration {it}:")
+        j, z = min(enumerate(v_z.col(0)), key=lambda x: x[1])
+        if z >= 0:
+            break
+        m_b = extract(i_b, m_a)
+        m_n = extract(i_n, m_a)
+        d_x = (m_b.inv() * m_n).colvec(j)
+        if all(a <= 0 for a in d_x.col(0)):
+            res = Result.UNBOUNDED
+            break
+        iab = enumerate(zip(d_x.col(0), v_x.col(0)))
+        t, i = min((b / a, i) for i, (a, b) in iab if a > 0)
+        d_z = -(m_b.inv() * m_n).trans().colvec(i)
+        s = v_z[j][0] / d_z[j][0]
+        v_x -= t * d_x
+        v_x[i][0] = t
+        v_z -= s * d_z
+        v_z[j][0] = s
+        i_b[i], i_n[j] = i_n[j], i_b[i]
 
-        # compute intermediate values
-        x = npl.solve(A[:, B], b)  # x_B = B^-1 * b
-        y = npl.solve(np.transpose(A[:, B]), c[B])  # y_B = B^T^-1 * c_B
-        z = c[N] - np.transpose(A[:, N]).dot(y)  # s_N = c_N - N^T * y_B
-        print("  x = ", x)
-        print("  l = ", y)
-        print("  s = ", z)
-        if (z >= -E).all():
-            print()
-            return x, z
-
-        # select entering variable q
-        q = min(i for i, s_i in enumerate(z) if s_i < -E)
-        d = npl.solve(A[:, B], A[:, [N[q]]].reshape(-1))  # d = B^-1 * N_q
-        print("  d = ", d)
-        if (d <= E).all():
-            raise RuntimeError("problem is unbounded")
-        print()
-
-        # select leaving variable p
-        xd = ((i, x_i / d_i) for i, (x_i, d_i) in enumerate(zip(x, d)) if d_i > E)
-        p, _ = min(xd, key=lambda xd_i: (xd_i[1], B[xd_i[0]]))
-
-        pivot(N, B, N[q], B[p])
+    return res, i_n, i_b, v_x, v_z
 
 
-def simplex(A, N, B, b, c):
+def solve_dual(m_a, i_n, i_b, v_x, v_z):
     """
-    Solve linear program in slack form.
-
-    The basis must be invertible.
+    Simplex implementation asssuming that the input is dual feasible.
     """
-    N, B = N[:], B[:]
+    assert all(z >= 0 for z in v_z.col(0))
 
-    with np.printoptions(precision=2, suppress=True):
-        initialize(A, N, B, b, c)
-        x, _ = solve(A, N, B, b, c)
+    i_n = i_n.copy()
+    i_b = i_b.copy()
+    v_x = v_x.copy()
+    v_z = v_z.copy()
+    res = Result.BOUNDED
 
-    return [x[B.index(i)] if i in B else 0 for i in range(len(N))]
+    while True:
+        i, x = min(enumerate(v_x.col(0)), key=lambda x: x[1])
+        if x >= 0:
+            break
+        m_b = extract(i_b, m_a)
+        m_n = extract(i_n, m_a)
+        d_z = -(m_b.inv() * m_n).trans().colvec(i)
+        if all(a <= 0 for a in d_z.col(0)):
+            res = Result.UNBOUNDED
+            break
+        iab = enumerate(zip(d_z.col(0), v_z.col(0)))
+        s, j = min((b / a, j) for j, (a, b) in iab if a > 0)
+        d_x = (m_b.inv() * m_n).colvec(j)
+        t = v_x[i][0] / d_x[i][0]
+        v_x -= t * d_x
+        v_x[i][0] = t
+        v_z -= s * d_z
+        v_z[j][0] = s
+        i_b[i], i_n[j] = i_n[j], i_b[i]
+
+    return res, i_n, i_b, v_x, v_z
+
+
+def solve(m_a, i_n, i_b, v_x, v_z):
+    """
+    A two-phase solve implementation.
+    """
+    primal_feasible = all(x >= 0 for x in v_x.col(0))
+    dual_feasible = all(z >= 0 for z in v_z.col(0))
+    if primal_feasible and dual_feasible:
+        return Result.BOUNDED, i_n.copy(), i_b.copy(), v_x.copy(), v_z.copy()
+    if primal_feasible:
+        return solve_primal(m_a, i_n, i_b, v_x, v_z)
+
+    s_z = v_z if dual_feasible else vec([1 for _ in v_z.col(0)])
+    res, d_n, d_b, d_x, d_z = solve_dual(m_a, i_n, i_b, v_x, s_z)
+    # if the dual solution is unbounded, d_x does not capture a primal solution
+    if res == Result.UNBOUNDED:
+        res = Result.INFEASIBLE
+    if res == Result.INFEASIBLE or dual_feasible:
+        return res, d_n, d_b, d_x, d_z
+
+    # adjust objective coefficients for solving the second phase
+    def val(t):
+        return -v_z[i_n.index(t)][0] if t in i_n else 0
+
+    m_n = extract(d_n, m_a)
+    m_b = extract(d_b, m_a)
+    c_n = [val(t) for t in d_n]
+    c_b = [val(t) for t in d_b]
+    r_z = (m_b.inv() * m_n).trans() * vec(c_b) - vec(c_n)
+    return solve_primal(m_a, d_n, d_b, d_x, r_z)
+
+
+def print_solution(i_n, i_b, v_x, v_z, res, s_n, s_b, s_x, s_z):
+    """
+    Print the given solution to the solve problem.
+    """
+
+    def ps(v, i_n, v_z, i_b, v_x):
+        res = 0
+        for i, t in enumerate(i_n):
+            if t in i_b:
+                j = i_b.index(t)
+                print(f"{v}_{t} = {v_x[j][0]}")
+                res -= v_z[i][0] * v_x[j][0]
+            else:
+                print(f"{v}_{t} = 0")
+        return res
+
+    print("**************************")
+    if res == Result.INFEASIBLE:
+        print("infeasible")
+    else:
+        rp = ps("x", i_n, v_z, s_b, s_x)
+        print(f"lower: {rp}")
+        if res == Result.BOUNDED:
+            rd = -ps("z", i_b, v_x, s_n, s_z)
+            print(f"upper: {rd}")
+            assert rp == rd
+    print("**************************")
+
+
+def main():
+    """
+    Compute some examples.
+    """
+    # fmt: off
+
+    # a bounded example
+    i_n = [1, 2]
+    i_b = [3, 4, 5]
+    m_a = mat([
+        [-1,  1, 1, 0, 0],
+        [-2,  1, 0, 1, 0],
+        [ 0, -1, 0, 0, 1]])
+    v_x = vec([-1, -3, -5])
+    v_z = vec([4, 3])
+
+    res, s_n, s_b, s_x, s_z = solve(m_a, i_n, i_b, v_x, v_z)
+    print_solution(i_n, i_b, v_x, v_z, res, s_n, s_b, s_x, s_z)
+
+    # an unbounded example
+    i_b = [3, 4, 5]
+    i_n = [1, 2]
+    m_a = mat([
+        [-2,  3, 1, 0, 0],
+        [ 0,  4, 0, 1, 0],
+        [ 0, -1, 0, 0, 1]])
+    v_x = vec([5, 7, 0])
+    v_z = vec([-1, 1])
+
+    print_solution(i_n, i_b, v_x, v_z, *solve(m_a, i_n, i_b, v_x, v_z))
+
+    # a bounded two-phase example
+    i_b = [4, 5]
+    i_n = [1, 2, 3]
+    m_a = mat([
+        [-1, -1, -1, 1, 0],
+        [ 1, -1,  1, 0, 1]])
+    v_x = vec([-2, 1])
+    v_z = vec([-2, 6, 0])
+
+    print_solution(i_n, i_b, v_x, v_z, *solve(m_a, i_n, i_b, v_x, v_z))
+
+
+main()

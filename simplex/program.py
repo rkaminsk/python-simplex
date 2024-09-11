@@ -1,6 +1,7 @@
 """
 Basic definitions and functions for linear programs.
 """
+
 from collections import defaultdict
 from fractions import Fraction
 from typing import DefaultDict, Dict, List, Sequence, Tuple

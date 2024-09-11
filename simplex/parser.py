@@ -1,6 +1,7 @@
 """
 A parser to read the string representation of a linear program.
 """
+
 import re
 from collections import defaultdict
 from fractions import Fraction
@@ -91,9 +92,12 @@ class Parser:
     Program     ::= Constraints Objective SumTerm
     Constraints ::= Constraint | Constraint Constraints
     Constraint  ::= SumTerm Operator SumTerm
-    SumTerm     ::= MulTerm | MulTerm + SumTerm | MulTerm - SumTerm
-    MulTerm     ::= Term | Term * MulTerm | Term / MulTerm
-    Term        ::= Number | Variable | - SumTerm | ( SumTerm )
+    SumTerm     ::= MulTerm SumCont
+    SumCont     ::= '+' MulTerm SumCont | '-' MulTerm SumCont | epsilon
+    MulTerm     ::= NegTerm MulCont
+    MulCont     ::= '*  NegTerm MulCont | '/' NegTerm MulCont | epsilon
+    NegTerm     ::= '-' NegTerm | Term
+    Term        ::= Number | Variable | ( SumTerm )
 
     Note that only _constraints that can be transformed into linear terms (in a
     straightforward manner) are accepted.
@@ -213,35 +217,47 @@ class Parser:
         """
         See the matching production in the class docstring.
         """
-        lhs = self._mul_term()
+        return self._mul_term() + self._sum_cont()
+
+    def _sum_cont(self) -> RawTerm:
+        """
+        See the matching production in the class docstring.
+        """
         if self._accept("operator", "+"):
-            rhs = self._sum_term()
-            return lhs + rhs
+            return self._mul_term() + self._sum_cont()
         if self._accept("operator", "-"):
-            rhs = self._sum_term()
-            return lhs + _negate(rhs)
-        return lhs
+            return _negate(self._mul_term()) + self._sum_cont()
+        return []
 
     def _mul_term(self) -> RawTerm:
         """
         See the matching production in the class docstring.
         """
-        lhs = self._term()
+        lhs = self._neg_term()
+        return self._mul_cont(lhs)
+
+    def _mul_cont(self, lhs) -> RawTerm:
+        """
+        See the matching production in the class docstring.
+        """
         if self._accept("operator", "/"):
-            rhs = self._mul_term()
-            return _divide(lhs, rhs)
+            return self._mul_cont(_divide(lhs, self._neg_term()))
         if self._accept("operator", "*"):
-            rhs = self._mul_term()
-            return _multiply(lhs, rhs)
+            return self._mul_cont(_multiply(lhs, self._neg_term()))
         return lhs
+
+    def _neg_term(self) -> RawTerm:
+        """
+        See the matching production in the class docstring.
+        """
+        if self._accept("operator", "-"):
+            return _negate(self._term())
+        return self._term()
 
     def _term(self) -> RawTerm:
         """
         See the matching production in the class docstring.
         """
-        if self._accept("operator", "-"):
-            term = self._sum_term()
-            return _negate(term)
         if self._accept("parenthesis", "("):
             term = self._sum_term()
             self._expect("parenthesis", ")")
