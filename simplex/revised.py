@@ -132,7 +132,7 @@ def solve(m_a, i_n, i_b, v_x, v_z):
     if primal_feasible:
         return solve_primal(rev, m_a, i_n, i_b, v_x, v_z)
 
-    s_z = v_z if dual_feasible else vec([1 for _ in v_z.col(0)])
+    s_z = v_z if dual_feasible else vec([0 for _ in v_z.col(0)])
     res, d_n, d_b, d_x, d_z = solve_dual(rev, m_a, i_n, i_b, v_x, s_z)
     # if the dual solution is unbounded, d_x does not capture a primal solution
     if res == Result.UNBOUNDED:
